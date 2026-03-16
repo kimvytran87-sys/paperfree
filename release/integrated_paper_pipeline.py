@@ -967,10 +967,41 @@ def main():
             if col not in download_df.columns:
                 download_df[col] = ""
         st.dataframe(download_df[preview_cols], use_container_width=True, height=400)
+
+        st.markdown("### PDF direct download")
+        shown_any_pdf = False
+        for idx, row in download_df.iterrows():
+            pdf_path = str(row.get("pdf_path", "") or "").strip()
+            downloaded_pdf = bool(row.get("downloaded_pdf", False))
+            title = str(row.get("matched_title", "") or row.get("input_title", "") or f"paper_{idx+1}").strip()
+
+            if downloaded_pdf and pdf_path and os.path.exists(pdf_path):
+                shown_any_pdf = True
+                safe_name = os.path.basename(pdf_path)
+                with st.expander(f"{idx+1}. {title}", expanded=False):
+                    st.write(f"Source: {row.get('source', '')}")
+                    st.write(f"DOI: {row.get('doi', '')}")
+                    with open(pdf_path, "rb") as pdf_file:
+                        st.download_button(
+                            label=f"Download PDF - {safe_name}",
+                            data=pdf_file.read(),
+                            file_name=safe_name,
+                            mime="application/pdf",
+                            key=f"pdf_download_{idx}",
+                        )
+        if not shown_any_pdf:
+            st.info("No local PDF files are currently available for direct download.")
+
         for label, path in output_paths.items():
             if path and os.path.exists(path):
                 with open(path, "rb") as f:
-                    st.download_button(f"Download {os.path.basename(path)}", data=f.read(), file_name=os.path.basename(path), mime="text/csv" if path.endswith(".csv") else "application/json", key=f"dl_{label}")
+                    st.download_button(
+                        f"Download {os.path.basename(path)}",
+                        data=f.read(),
+                        file_name=os.path.basename(path),
+                        mime="text/csv" if path.endswith(".csv") else "application/json",
+                        key=f"dl_{label}",
+                    )
     elif isinstance(download_df, pd.DataFrame) and download_df.empty:
         st.info("No downloadable records were produced.")
 
